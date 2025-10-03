@@ -13,6 +13,11 @@ async function connectToDatabase() {
 }
 
 export default async function handler(req, res) {
+  // Obsługa CORS
+  res.setHeader('Access-Control-Allow-Origin', '*'); // albo podaj konkretną domenę zamiast *
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   try {
     const requestBody = req.body || (await req.json());
     const { postId, userId, commentBody } = requestBody;
