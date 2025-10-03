@@ -13,14 +13,29 @@ async function connectToDatabase() {
 }
 
 export default async function handler(req, res) {
+  // Obsługa CORS
+  res.setHeader('Access-Control-Allow-Origin', '*'); // albo podaj konkretną domenę zamiast *
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Preflight request (OPTIONS)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res
+      .status(405)
+      .json({ success: false, message: 'Method not allowed' });
+  }
+
   try {
-    const requestBody = req.body || (await req.json());
-    const { commentId, userId } = requestBody;
+    const { commentId, userId } = req.body;
 
     if (!commentId || !userId) {
       return res
         .status(400)
-        .json({ success: false, message: 'Missing required parameters' });
+        .json({ success: false, message: 'Missing parameters' });
     }
 
     const db = await connectToDatabase();
@@ -30,29 +45,25 @@ export default async function handler(req, res) {
       _id: new ObjectId(commentId),
     });
 
-    if (!comment) {
+    if (!comment)
       return res
         .status(404)
         .json({ success: false, message: 'Comment not found' });
-    } else if (comment.Author._id !== userId) {
+    if (comment.Author._id !== userId)
       return res
         .status(403)
-        .json({
-          success: false,
-          message: 'Not authorized to delete this comment',
-        });
-    } else {
-      const deleteResult = await commentsCollection.deleteOne({
-        _id: new ObjectId(commentId),
-      });
+        .json({ success: false, message: 'Not authorized' });
 
-      if (deleteResult.deletedCount === 1) {
-        return res.status(200).json({ success: true, deletedId: commentId });
-      } else {
-        return res
-          .status(500)
-          .json({ success: false, message: 'Failed to delete comment' });
-      }
+    const deleteResult = await commentsCollection.deleteOne({
+      _id: new ObjectId(commentId),
+    });
+
+    if (deleteResult.deletedCount === 1) {
+      return res.status(200).json({ success: true, deletedId: commentId });
+    } else {
+      return res
+        .status(500)
+        .json({ success: false, message: 'Failed to delete comment' });
     }
   } catch (err) {
     console.error(err);
