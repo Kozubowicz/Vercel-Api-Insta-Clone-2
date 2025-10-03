@@ -13,10 +13,14 @@ async function connectToDatabase() {
 }
 
 export default async function handler(req, res) {
-  // Obsługa CORS
-  res.setHeader('Access-Control-Allow-Origin', '*'); // albo podaj konkretną domenę zamiast *
+  // Handle CORS preflight requests
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Restrict in production
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end(); // Respond to preflight
+  }
 
   try {
     const requestBody = req.body || (await req.json());
@@ -35,6 +39,8 @@ export default async function handler(req, res) {
       commentBody,
       postId,
       Author: { _id: userId },
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     const result = await commentsCollection.insertOne(comment);
